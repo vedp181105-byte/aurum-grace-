@@ -69,7 +69,7 @@ export default function TrackOrder() {
         {searchResult && (
           <div style={{ background: '#fff', border: '1px solid var(--gold-pale)', padding: '28px', marginBottom: '48px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--gold)' }}>#{searchResult.orderId}</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--gold)' }}>#{searchResult.id}</span>
               <span style={{ fontSize: '.78rem', color: 'var(--gray)', textTransform: 'capitalize' }}>{searchResult.status}</span>
             </div>
             <OrderTracker tracking={searchResult.tracking} />
