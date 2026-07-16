@@ -293,21 +293,7 @@ router.post('/orders', async (req, res) => {
     // Clear cart
     req.session.cart = [];
 
-    // Format response to match frontend expectations
-    const formatted = {
-      id:        order.orderId,
-      date:      order.createdAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }),
-      customer:  order.customer,
-      items:     order.items,
-      subtotal:  order.subtotal,
-      tax:       order.tax,
-      discount:  order.discount,
-      total:     order.total,
-      payMethod: order.payMethod,
-      status:    order.status,
-    };
-
-    res.json({ success: true, order: formatted });
+    res.json({ success: true, order: serializeOrder(order) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -331,6 +317,27 @@ function buildTracking(status) {
   };
 }
 
+// Always exposes the human-readable orderId (e.g. "AG1752489213456") as `id` —
+// never the internal MongoDB _id, which Mongoose otherwise auto-adds as a
+// same-named `id` virtual and silently overrides it.
+function serializeOrder(order) {
+  return {
+    id:         order.orderId,
+    date:       order.createdAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }),
+    createdAt:  order.createdAt,
+    customer:   order.customer,
+    items:      order.items,
+    subtotal:   order.subtotal,
+    tax:        order.tax,
+    discount:   order.discount,
+    total:      order.total,
+    payMethod:  order.payMethod,
+    couponCode: order.couponCode,
+    status:     order.status,
+    tracking:   buildTracking(order.status),
+  };
+}
+
 // GET /api/orders/mine — orders for the logged-in user only, each with a tracking timeline
 router.get('/orders/mine', async (req, res) => {
   try {
@@ -338,17 +345,7 @@ router.get('/orders/mine', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Please log in to view your orders' });
 
     const orders = await Order.find({ userId: req.session.userId }).sort({ createdAt: -1 });
-    const withTracking = orders.map(o => ({
-      id:        o.orderId,
-      date:      o.createdAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }),
-      items:     o.items,
-      total:     o.total,
-      payMethod: o.payMethod,
-      status:    o.status,
-      tracking:  buildTracking(o.status),
-    }));
-
-    res.json({ success: true, count: withTracking.length, orders: withTracking });
+    res.json({ success: true, count: orders.length, orders: orders.map(serializeOrder) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -358,7 +355,7 @@ router.get('/orders/:id', async (req, res) => {
   try {
     const order = await Order.findOne({ orderId: req.params.id });
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
-    res.json({ success: true, order: { ...order.toJSON(), tracking: buildTracking(order.status) } });
+    res.json({ success: true, order: serializeOrder(order) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -368,7 +365,7 @@ router.get('/orders/:id', async (req, res) => {
 router.get('/orders', async (req, res) => {
   try {
     const orders = await Order.find().sort({ createdAt: -1 });
-    res.json({ success: true, count: orders.length, orders });
+    res.json({ success: true, count: orders.length, orders: orders.map(serializeOrder) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -412,5 +409,7 @@ router.post('/reviews', async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+module.exports = router;
 
 module.exports = router;
